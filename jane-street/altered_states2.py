@@ -18,15 +18,9 @@ STATES = {
     'WISCONSIN': 5893718, 'WYOMING': 576851
 }
 
-UNIQUE_LETTERS = list({letter for state in STATES for letter in state if letter != ' '})
+ALPHABET = list({letter for state in STATES for letter in state if letter != ' '})
 DIRECTIONS = [d for d in product([-1, 0, 1], repeat = 2) if d != (0,0)]
 ALTER_TOLERANCE = 1
-
-### GENETIC ALGORITHM parameters
-TEMPERATURE = 7 # the higher the value, the closer to 50/50 the genetics of the child are
-MUTATION_RATE = 0.2 # the chance of mutation
-
-
 
 class Grid:
     def __init__(self, rows):
@@ -39,7 +33,7 @@ class Grid:
         (self.fitness, self.states) = self.score_grid()
 
     def init_rand(R, C):
-        rows = [[random.choice(UNIQUE_LETTERS) for _ in range(C)] for _ in range(R)]
+        rows = [[random.choice(ALPHABET) for _ in range(C)] for _ in range(R)]
         return Grid(rows)
 
     def print_grid(self):
@@ -79,39 +73,25 @@ class Grid:
                 score += population
                 states.append(state)
         return score, states
-
     
-    def cross(self, other):
+    # crossover at probabilistic k-point (which is biased to the center) split
+    def cross(self, other, crossover_balance=7, mutation_rate=0.2):
         if (self.R != other.R or self.C != other.C):
             raise Exception("To be crossed, grids must be the same size!")
-        #if (random.random() < 0.5):
-        return self.cross1(other)  
-       # else:
-       #     return self.cross2(other)
-    
-    # method 1: crossover at probabilistic k-point (which is biased to the center) split
-    def cross1(self, other):
         N = self.R * self.C
         mean = (N - 1) / 2
-        std_dev =  N / TEMPERATURE 
+        std_dev =  N / crossover_balance 
         k = int(np.random.normal(mean, std_dev))
         k = max(0, min(N - 1, k)) # make sure k stays within bounds
         child_rows = []
         for r in range(self.R):
             row = []
             for c in range(self.C):
-                if (random.random() <= MUTATION_RATE):
-                    row.append(random.choice(UNIQUE_LETTERS)) # new mutated letter
+                if (random.random() <= mutation_rate):
+                    row.append(random.choice(ALPHABET)) # new mutated letter
                 elif (r * self.R + c) < k:
                     row.append(self.get_value((r,c))) # letter from self parent
                 else:
                     row.append(other.get_value((r,c))) # letter from other parent
             child_rows.append(row)
         return Grid(child_rows)
-    
-    # method 2: crossover uniformly
-    def cross2(self, other):
-        child_rows = [[self.get_value((r,c)) if random.random() > 0.5 else other.get_value((r,c)) for c in range(self.C)] for r in range(self.R)]
-        return Grid(child_rows)
-
-
